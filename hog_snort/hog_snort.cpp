@@ -1,57 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <fstream>
 #include <memory>
 #include <opencv2/opencv.hpp>
 
-#include "../common/optionparser.h"
+#include "../common/ht_common.hpp"
 
 using namespace cv;
 using namespace std;
 
-struct Arg: public option::Arg {
-  static void printError(const char* msg1, const option::Option& opt, const char* msg2) {
-    fprintf(stderr, "%s", msg1);
-    fwrite(opt.name, opt.namelen, 1, stderr);
-    fprintf(stderr, "%s", msg2);
-  }
-
-  static option::ArgStatus Unknown(const option::Option& opt, bool msg) {
-    if(msg) {
-      printError("Unknown option '", opt, "'\n");
-    }
-    return option::ARG_ILLEGAL;
-  }
-
-  static option::ArgStatus Path(const option::Option& opt, bool msg) {
-    if(opt.arg != 0) {
-      return option::ARG_OK;
-    }
-
-    if(msg) {
-      printError("Option '", opt, "' requires an argument\n");
-    }
-    return option::ARG_ILLEGAL;
-  }
-};
-
-enum optionIndex {UNKNOWN, HELP, POS_PATH, NEG_PATH};
 const option::Descriptor usage[] =
 {
-  {UNKNOWN, 0, "", "", Arg::Unknown, "USAGE: hog_snort [options] xml_file\n\n"
+  {UNKNOWN, 0, "", "", Arg::Unknown, "USAGE: hog_snort [options] feature_file\n\n"
                                      "Options:" },
   {HELP, 0, "", "help", Arg::None, "  --help  \tPrint this text." },
   {POS_PATH, 0, "p", "path", Arg::Path, "  --path <path>, \t-p <path>  \tSpecifies the path for the image examples."},
   {0, 0, 0, 0, 0, 0}
 };
-
-static void saveCursor(void) {
-  fwrite("\033[s", sizeof(char), 3, stderr);
-}
-
-static void restoreCursor(void) {
-  fwrite("\033[u", sizeof(char), 3, stderr);
-}
 
 bool is_valid_file_extension(string ext) {
   if(strcmp("bmp", ext.c_str()) == 0) {
@@ -106,23 +72,33 @@ bool get_image_paths_into(string dir, vector<string>& into) {
   }
 }
 
-void read_images(vector<string>& imagePaths, Mat& features) {
+void write_headers(bool valid, int length, int width, ofstream &f) {
+  f.seekp(0);
+
+  if(valid) {
+    f.write("HOGSNRT", 7);
+  }
+  else {
+    f.write("INVALID", 7);
+  }
+  f.write((char *)&length, sizeof(int));
+  f.write((char *)&width, sizeof(int));
+}
+
+void process_images(vector<string>& imagePaths, ofstream &featureFile) {
   unsigned int row = 0;
-  int lastProgress = 100;
-  int column = 0;
+  unsigned int column = 0;
 
   auto totalPaths = imagePaths.size();
   fprintf(stderr, "Found %zu examples.\n", totalPaths);
 
+  // Preallocate space in the file for the headers:
+  write_headers(false, 0, 0, featureFile);
+
   saveCursor();
   for(auto path : imagePaths) {
     restoreCursor();
-    int progress = (row + 1) * 100 / totalPaths;
-    if(progress != lastProgress) {
-      lastProgress = progress;
-      fprintf(stderr, "[%3d%%] Processing examples...", progress);
-      fflush(stderr);
-    }
+    progress(row, totalPaths, "Processing examples...");
 
     // Load the image and convert it to grayscale in one step:
     auto image = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
@@ -134,16 +110,20 @@ void read_images(vector<string>& imagePaths, Mat& features) {
     hog.compute(image, v, Size(0,0), Size(0,0), l);
     if(column == 0) {
       column = v.size();
-      features.create(totalPaths, column, CV_32F);
+      //features.create(totalPaths, column, CV_32FC1);
     }
-    memcpy(&(features.data[column * row * sizeof(float)]),
-            v.data(), column * sizeof(float));
+    featureFile.write((char *)v.data(), sizeof(float) * v.size());
+    //features.push_back(f);
+    //memcpy(&(features.data[column * row * sizeof(float)]),
+    //        v.data(), column * sizeof(float));
     //values.push_back(v);
     //locations.push_back(l);
 
     row = row + 1;
     // 'image' should be released here as it falls out of scope...
   }
+
+  write_headers(true, row, column, featureFile);
   fprintf(stderr, " Done.\n");
 }
 
@@ -166,7 +146,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  string xml_path = parse.nonOption(0);
+  string feature_path = parse.nonOption(0);
 
   if(options.get()[POS_PATH]) {
     pos_dir = options.get()[POS_PATH].last()->arg;
@@ -179,15 +159,17 @@ int main(int argc, char* argv[]) {
     return false;
   }
 
-  Mat M;
+  //Mat M;
   //vector<vector<Point>> feature_locations;
-  read_images(imagePaths, M);
+  //FileStorage featureFile(feature_path, FileStorage::WRITE);
+  ofstream featureFile(feature_path, ofstream::binary);
+  process_images(imagePaths, featureFile);
 
-  printf("Writing features to '%s'.\n", xml_path.c_str());
-  FileStorage featureXml(xml_path, FileStorage::WRITE);
-  write(featureXml, "Descriptor_of_images", M);
+  printf("Wrote features to '%s'.\n", feature_path.c_str());
+  //write(featureFile, "Descriptor_of_images", M);
 
-  M.release();
-  featureXml.release();
+  //M.release();
+  //featureFile.release();
+  featureFile.close();
   return 0;
 }
