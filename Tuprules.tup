@@ -9,6 +9,9 @@ CFLAGS += -Wall
 export NIX_CFLAGS_COMPILE
 CFLAGS += $NIX_CFLAGS_COMPILE
 
+# Debug
+CFLAGS += -g
+
 LINKFLAGS += `pkg-config --libs opencv`
 export PKG_CONFIG_PATH
 
