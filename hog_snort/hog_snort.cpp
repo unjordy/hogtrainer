@@ -6,6 +6,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "../common/ht_common.hpp"
+#include "../common/ht_image_paths.hpp"
 
 using namespace cv;
 using namespace std;
@@ -18,59 +19,6 @@ const option::Descriptor usage[] =
   {POS_PATH, 0, "p", "path", Arg::Path, "  --path <path>, \t-p <path>  \tSpecifies the path for the image examples."},
   {0, 0, 0, 0, 0, 0}
 };
-
-bool is_valid_file_extension(string ext) {
-  if(strcmp("bmp", ext.c_str()) == 0) {
-    return true;
-  }
-  else if(strcmp("jpg", ext.c_str()) == 0) {
-    return true;
-  }
-  else if(strcmp("jpeg", ext.c_str()) == 0) {
-    return true;
-  }
-  else if(strcmp("png", ext.c_str()) == 0) {
-    return true;
-  }
-  else if(strcmp("ppm", ext.c_str()) == 0) {
-    return true;
-  }
-  else if(strcmp("pgm", ext.c_str()) == 0) {
-    return true;
-  }
-  return false;
-}
-
-bool get_image_paths_into(string dir, vector<string>& into) {
-  auto dirp = opendir(dir.c_str());
-  if(dirp != NULL) {
-    dirent *dp;
-    while((dp = readdir(dirp))) {
-      auto filename = string(dp->d_name);
-      auto ext_pos = string(dp->d_name).find_last_of('.');
-      auto ext = filename.substr(ext_pos + 1);
-      // Convert extension to lowercase:
-      transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-
-      if(dp->d_type & DT_DIR) {
-        continue; // Skip directories
-      }
-      else if(!is_valid_file_extension(ext)) {
-        fprintf(stderr, "Skipping %s...\n", dp->d_name);
-        continue;
-      }
-      string imagePath = string(dir);
-      imagePath += "/";
-      imagePath += filename;
-      into.push_back(imagePath);
-    }
-    closedir(dirp);
-    return true;
-  }
-  else {
-    return false;
-  }
-}
 
 void write_headers(bool valid, int length, int width, ofstream &f) {
   f.seekp(0);
@@ -110,19 +58,14 @@ void process_images(vector<string>& imagePaths, ofstream &featureFile) {
     hog.compute(image, v, Size(0,0), Size(0,0), l);
     if(column == 0) {
       column = v.size();
-      //features.create(totalPaths, column, CV_32FC1);
     }
     featureFile.write((char *)v.data(), sizeof(float) * v.size());
-    //features.push_back(f);
-    //memcpy(&(features.data[column * row * sizeof(float)]),
-    //        v.data(), column * sizeof(float));
-    //values.push_back(v);
-    //locations.push_back(l);
 
     row = row + 1;
     // 'image' should be released here as it falls out of scope...
   }
 
+  // Write the real headers to the beginning of the file:
   write_headers(true, row, column, featureFile);
   fprintf(stderr, " Done.\n");
 }
@@ -156,20 +99,14 @@ int main(int argc, char* argv[]) {
   fprintf(stderr, "Using image directory '%s'...\n", pos_dir.c_str());
   if(!get_image_paths_into(pos_dir, imagePaths)) {
     fprintf(stderr, "Couldn't open image directory '%s'\n", pos_dir.c_str());
-    return false;
+    return 1;
   }
 
-  //Mat M;
-  //vector<vector<Point>> feature_locations;
-  //FileStorage featureFile(feature_path, FileStorage::WRITE);
   ofstream featureFile(feature_path, ofstream::binary);
   process_images(imagePaths, featureFile);
 
   printf("Wrote features to '%s'.\n", feature_path.c_str());
-  //write(featureFile, "Descriptor_of_images", M);
 
-  //M.release();
-  //featureFile.release();
   featureFile.close();
   return 0;
 }
