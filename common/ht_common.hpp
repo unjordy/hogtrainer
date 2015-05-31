@@ -1,6 +1,7 @@
 #ifndef HT_COMMON_HPP
 #define HT_COMMON_HPP
 
+#include <stdio.h>
 #include "optionparser.h"
 
 struct Arg: public option::Arg {
