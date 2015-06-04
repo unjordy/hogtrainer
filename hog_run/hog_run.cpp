@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
   auto num_pos = imagePaths.size();
   fprintf(stderr, "Found %zu positive test images.\n", num_pos);
   unsigned int wrong_pos = process_images(imagePaths, svm, true);
-  printf("Misclassified %u of %zu positive images (%.2f%%).\n", wrong_pos, num_pos, (float)wrong_pos / (float)num_pos * 100.0);
+  printf("Misclassified %u of %zu positive images (%.2f%% accuracy).\n", wrong_pos, num_pos, ((float)num_pos - (float)wrong_pos) / (float)num_pos * 100.0);
   fprintf(stderr, "\n");
 
   imagePaths.clear();
@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
   auto num_neg = imagePaths.size();
   fprintf(stderr, "Found %zu negative test images.\n", num_neg);
   unsigned int wrong_neg = process_images(imagePaths, svm, false);
-  printf("Misclassified %u of %zu negative images (%.2f%%).\n", wrong_neg, num_neg, (float)wrong_neg / (float)num_neg * 100.0);
+  printf("Misclassified %u of %zu negative images (%.2f%% accuracy).\n", wrong_neg, num_neg, ((float)num_neg - (float)wrong_neg) / (float)num_neg * 100.0);
 
 
   return 0;
