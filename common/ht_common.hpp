@@ -30,7 +30,7 @@ struct Arg: public option::Arg {
   }
 };
 
-enum optionIndex {UNKNOWN, HELP, POS_PATH, NEG_PATH};
+enum optionIndex {UNKNOWN, HELP, POS_PATH, NEG_PATH, AUTO_TRAIN};
 
 static void saveCursor(void) {
   fwrite("\033[s", sizeof(char), 3, stderr);

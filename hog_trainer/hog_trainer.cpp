@@ -16,6 +16,7 @@ const option::Descriptor usage[] =
   {HELP, 0, "", "help", Arg::None, "  --help  \tPrint this text." },
   {POS_PATH, 0, "p", "pos", Arg::Path, "  --pos <path>, \t-p <path>  \tSpecifies the positive feature file."},
   {NEG_PATH, 0, "n", "neg", Arg::Path, "  --neg <path>, \t-n <path>  \tSpecifies the negative feature file."},
+  {AUTO_TRAIN, 0, "a", "auto", Arg::None, "  --auto, \t -a  \tAutomatically set HOG model parameters (may be unstable)."},
   {0, 0, 0, 0, 0, 0}
 };
 
@@ -66,6 +67,7 @@ int main(int argc, char* argv[]) {
 
   string pos_path = "positive.bin";
   string neg_path = "negative.bin";
+  bool auto_train = false;
 
   if(parse.error()) {
     return 1;
@@ -85,6 +87,10 @@ int main(int argc, char* argv[]) {
 
   if(options.get()[NEG_PATH]) {
     neg_path = options.get()[NEG_PATH].last()->arg;
+  }
+
+  if(options.get()[AUTO_TRAIN]) {
+    auto_train = true;
   }
 
   //FileStorage positiveXml(pos_path, FileStorage::READ);
@@ -133,8 +139,14 @@ int main(int argc, char* argv[]) {
   CvSVMParams params;
   params.svm_type = CvSVM::C_SVC;
   params.kernel_type = CvSVM::LINEAR;
-  params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 10000, 1e-6);
-  svm.train(features, labels, Mat(), Mat(), params);
+  params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100000, 1e-6);
+  if(!auto_train) {
+    params.C = 0.01;
+    svm.train(features, labels, Mat(), Mat(), params);
+  }
+  else {
+    svm.train_auto(features, labels, Mat(), Mat(), params);
+  }
   //svm.train_auto(features, labels, Mat(), Mat(), params);
   fprintf(stderr, " Done.\n");
 
