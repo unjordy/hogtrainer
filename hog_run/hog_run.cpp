@@ -128,9 +128,16 @@ int main(int argc, char* argv[]) {
   auto params = svm.get_params();
   auto svm_type = svm_type_as_string(params.svm_type);
   auto svm_kernel = svm_kernel_as_string(params.kernel_type);
+  double svm_c = params.C;
+  double svm_gamma = params.gamma;
+  double svm_nu = params.nu;
+  double svm_coef0 = params.coef0;
+  double svm_degree = params.degree;
   printf("Using SVM model: '%s'\n", svm_path.c_str());
   printf("Type: %s\n", svm_type.c_str());
   printf("Kernel: %s\n", svm_kernel.c_str());
+  printf("Parameters: C=%.3f; gamma=%.3f; nu=%.3f; coef0=%.3f; degree=%.3f",
+        svm_c, svm_gamma, svm_nu, svm_coef0, svm_degree);
   fprintf(stderr, "\n");
 
   vector<string> imagePaths;
