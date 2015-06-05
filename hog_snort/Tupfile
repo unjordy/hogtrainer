@@ -1,4 +1,4 @@
 include_rules
 
 : foreach *.cpp |> !compile |>
-: *.o |> !binary |> hog_snort
+: *.o |> !binary |> $(bin)/hog_snort

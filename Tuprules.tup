@@ -19,5 +19,7 @@ CFLAGS += -g
 LINKFLAGS += `pkg-config --libs opencv`
 LINKFLAGS += -L$CUDA_PATH/lib64
 
+bin = $(TUP_CWD)/bin
+
 !compile = |> $CXX $(CFLAGS) -c %f -o %o |> %B.o
 !binary = |> $CXX $(LINKFLAGS) %f -o %o |>
