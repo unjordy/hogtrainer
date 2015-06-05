@@ -1,6 +1,7 @@
 .gitignore
 export PKG_CONFIG_PATH
 export CUDA_PATH
+export CXX
 
 # C++ 11
 CFLAGS += -std=c++11
@@ -18,5 +19,5 @@ CFLAGS += -g
 LINKFLAGS += `pkg-config --libs opencv`
 LINKFLAGS += -L$CUDA_PATH/lib64
 
-!compile = |> clang++ $(CFLAGS) -c %f -o %o |> %B.o
-!binary = |> clang++ $(LINKFLAGS) %f -o %o |>
+!compile = |> $CXX $(CFLAGS) -c %f -o %o |> %B.o
+!binary = |> $CXX $(LINKFLAGS) %f -o %o |>
