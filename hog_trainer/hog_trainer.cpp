@@ -1,3 +1,9 @@
+/* hog_trainer: train a HOG model using HOGSNRT feature files.
+ * Part of the HOG Trainer suite.
+ *
+ * Copyright (c) 2015 University of Nevada, Las Vegas
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory>
@@ -53,7 +59,7 @@ bool read_features_into(unsigned int length, unsigned int width, unsigned int st
       features.row(r + start).col(c) = val;
     }
   }
-  printf(" Done.\n");
+  fprintf(stderr, " Done.\n");
 
   return true;
 }
@@ -108,6 +114,7 @@ int main(int argc, char* argv[]) {
   if(!open_features(p_length, width, positiveFile, "positive")) {
     return 1;
   }
+  printf("Found %d positive examples with %d features per example.\n", p_length, width);
 
   Mat features(p_length, width, CV_32FC1);
   read_features_into(p_length, width, 0, positiveFile, features, "positive");
@@ -126,6 +133,7 @@ int main(int argc, char* argv[]) {
   if(!open_features(n_length, width, negativeFile, "negative")) {
     return 1;
   }
+  printf("Found %d negative examples with %d features per example.\n", n_length, width);
 
   features.resize(p_length + n_length);
   read_features_into(n_length, width, p_length, negativeFile, features, "negative");
@@ -150,8 +158,8 @@ int main(int argc, char* argv[]) {
   //svm.train_auto(features, labels, Mat(), Mat(), params);
   fprintf(stderr, " Done.\n");
 
-  fprintf(stderr, "Writing trained model to '%s'...\n", svm_path.c_str());
   svm.save(svm_path.c_str());
+  printf("Wrote trained model to '%s'.\n", svm_path.c_str());
 
   labels.release();
   features.release();

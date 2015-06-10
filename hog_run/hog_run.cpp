@@ -1,4 +1,10 @@
+/* hog_run: benchmark a trained HOG model. Part of the HOG Trainer suite.
+ *
+ * Copyright (c) 2015 University of Nevada, Las Vegas
+ */
+
 #include <stdio.h>
+#include <sstream>
 #include <memory>
 #include <opencv2/opencv.hpp>
 
@@ -12,9 +18,11 @@ const option::Descriptor usage[] =
 {
   {UNKNOWN, 0, "", "", Arg::Unknown, "USAGE: hog_run [options] svm_file\n\n"
                                      "Options:" },
-  {HELP, 0, "", "help", Arg::None, "  --help  \tPrint this text." },
+  {HELP, 0, "", "help", Arg::None, "  --help  \t\tPrint this text." },
   {POS_PATH, 0, "p", "pos", Arg::Path, "  --pos <path>, \t-p <path>  \tSpecifies the positive test images path."},
   {NEG_PATH, 0, "n", "neg", Arg::Path, "  --neg <path>, \t-n <path>  \tSpecifies the negative test images path."},
+  {SIZE_X, 0, "x", "", Arg::Numeric, "  -x <n>  \t\tSpecifies an X height for the test images in pixels (default: 64)."},
+  {SIZE_Y, 0, "y", "", Arg::Numeric, "  -y <n>  \t\tSpecifies a Y height for the test images in pixels (default: 128)."},
   {0, 0, 0, 0, 0, 0}
 };
 
@@ -50,7 +58,9 @@ string svm_kernel_as_string(int svm_kernel) {
   }
 }
 
-unsigned int process_images(vector<string>& imagePaths, CvSVM &svm, bool positive) {
+unsigned int process_images(vector<string>& imagePaths,
+                        unsigned int size_x, unsigned int size_y, CvSVM &svm,
+                        bool positive) {
   unsigned int row = 0;
   unsigned int misclassified = 0;
   auto totalPaths = imagePaths.size();
@@ -67,9 +77,9 @@ unsigned int process_images(vector<string>& imagePaths, CvSVM &svm, bool positiv
 
     // Load the image and convert it to grayscale in one step:
     auto image = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
-    resize(image, image, Size(64, 128));
+    resize(image, image, Size(size_x, size_y));
 
-    HOGDescriptor hog(Size(64, 128), Size(8, 8), Size(4, 4), Size(4, 4), 9);
+    HOGDescriptor hog(Size(size_x, size_y), Size(8, 8), Size(4, 4), Size(4, 4), 9);
     vector<float> v;
     vector<Point> l;
     hog.compute(image, v, Size(0,0), Size(0,0), l);
@@ -102,6 +112,8 @@ int main(int argc, char* argv[]) {
 
   string pos_dir = "pos";
   string neg_dir = "neg";
+  unsigned int image_x = 64;
+  unsigned int image_y = 128;
 
   if(parse.error()) {
     return 1;
@@ -121,6 +133,16 @@ int main(int argc, char* argv[]) {
     neg_dir = options.get()[NEG_PATH].last()->arg;
   }
 
+  if(options.get()[SIZE_X]) {
+    string x_str = options.get()[SIZE_X].last()->arg;
+    istringstream(x_str) >> image_x;
+  }
+
+  if(options.get()[SIZE_Y]) {
+    string y_str = options.get()[SIZE_Y].last()->arg;
+    istringstream(y_str) >> image_y;
+  }
+
   string svm_path = parse.nonOption(0);
 
   CvSVM svm;
@@ -133,22 +155,22 @@ int main(int argc, char* argv[]) {
   double svm_nu = params.nu;
   double svm_coef0 = params.coef0;
   double svm_degree = params.degree;
-  printf("Using SVM model: '%s'\n", svm_path.c_str());
+  printf("Using SVM model: '%s'.\n", svm_path.c_str());
   printf("Type: %s\n", svm_type.c_str());
   printf("Kernel: %s\n", svm_kernel.c_str());
-  printf("Parameters: C=%.3f; gamma=%.3f; nu=%.3f; coef0=%.3f; degree=%.3f",
+  printf("Parameters: C=%.3f; gamma=%.3f; nu=%.3f; coef0=%.3f; degree=%.3f\n",
         svm_c, svm_gamma, svm_nu, svm_coef0, svm_degree);
-  fprintf(stderr, "\n");
+  printf("\n");
 
   vector<string> imagePaths;
   fprintf(stderr, "Using positive test image directory '%s'...\n", pos_dir.c_str());
   if(!get_image_paths_into(pos_dir, imagePaths)) {
-    fprintf(stderr, "Couldn't open positive test image directory '%s'\n", pos_dir.c_str());
+    fprintf(stderr, "Couldn't open positive test image directory '%s'.\n", pos_dir.c_str());
     return 1;
   }
   auto num_pos = imagePaths.size();
   fprintf(stderr, "Found %zu positive test images.\n", num_pos);
-  unsigned int wrong_pos = process_images(imagePaths, svm, true);
+  unsigned int wrong_pos = process_images(imagePaths, image_x, image_y, svm, true);
   printf("Misclassified %u of %zu positive images (%.2f%% accuracy).\n", wrong_pos, num_pos, ((float)num_pos - (float)wrong_pos) / (float)num_pos * 100.0);
   fprintf(stderr, "\n");
 
@@ -160,7 +182,7 @@ int main(int argc, char* argv[]) {
   }
   auto num_neg = imagePaths.size();
   fprintf(stderr, "Found %zu negative test images.\n", num_neg);
-  unsigned int wrong_neg = process_images(imagePaths, svm, false);
+  unsigned int wrong_neg = process_images(imagePaths, image_x, image_y, svm, false);
   printf("Misclassified %u of %zu negative images (%.2f%% accuracy).\n", wrong_neg, num_neg, ((float)num_neg - (float)wrong_neg) / (float)num_neg * 100.0);
 
 

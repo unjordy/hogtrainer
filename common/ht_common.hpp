@@ -2,6 +2,7 @@
 #define HT_COMMON_HPP
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "optionparser.h"
 
 struct Arg: public option::Arg {
@@ -28,9 +29,22 @@ struct Arg: public option::Arg {
     }
     return option::ARG_ILLEGAL;
   }
+
+  static option::ArgStatus Numeric(const option::Option &opt, bool msg) {
+    char *endptr = 0;
+    if(opt.arg != 0 && strtol(opt.arg, &endptr, 10)) {};
+    if(endptr != opt.arg && *endptr == 0) {
+      return option::ARG_OK;
+    }
+
+    if(msg) {
+      printError("Option '", opt, "' requires a numeric argument\n");
+    }
+    return option::ARG_ILLEGAL;
+  }
 };
 
-enum optionIndex {UNKNOWN, HELP, POS_PATH, NEG_PATH, AUTO_TRAIN};
+enum optionIndex {UNKNOWN, HELP, POS_PATH, NEG_PATH, AUTO_TRAIN, SIZE_X, SIZE_Y};
 
 static void saveCursor(void) {
   fwrite("\033[s", sizeof(char), 3, stderr);
