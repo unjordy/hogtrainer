@@ -79,7 +79,7 @@ unsigned int process_images(vector<string>& imagePaths,
     auto image = imread(path, CV_LOAD_IMAGE_GRAYSCALE);
     resize(image, image, Size(size_x, size_y));
 
-    HOGDescriptor hog(Size(size_x, size_y), Size(8, 8), Size(4, 4), Size(4, 4), 9);
+    HOGDescriptor hog(Size(size_x, size_y), Size(16, 16), Size(8, 8), Size(8, 8), 9);
     vector<float> v;
     vector<Point> l;
     hog.compute(image, v, Size(0,0), Size(0,0), l);
